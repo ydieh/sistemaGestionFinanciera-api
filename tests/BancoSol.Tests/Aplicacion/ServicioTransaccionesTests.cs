@@ -71,4 +71,56 @@ public class ServicioTransaccionesTests
 
         Assert.Equal(TipoTransaccion.Egreso, resultado.Tipo);
     }
+    [Fact]
+    public async Task ObtenerTodasAsync_ConTransaccionesExistentes_RetornaListadoMapeadoCorrectamente()
+    {
+        var transacciones = new List<Transaccion>
+        {
+            Transaccion.Crear(5000, "Sueldo de junio", new DateTime(2025, 12, 1), "sueldo", "BOB", TipoTransaccion.Ingreso, "pepito.perez@email.com"),
+            Transaccion.Crear(100, "Freelance", new DateTime(2025, 12, 5), "freelance", "USD", TipoTransaccion.Ingreso, "maria.lopez@email.com")
+        };
+
+        _repositorioMock
+            .Setup(r => r.ObtenerTodasAsync(null))
+            .ReturnsAsync(transacciones);
+
+        var resultado = (await _servicio.ObtenerTodasAsync()).ToList();
+
+        Assert.Equal(2, resultado.Count);
+        Assert.Equal("BOB", resultado[0].Moneda);
+        Assert.Equal("USD", resultado[1].Moneda);
+        _repositorioMock.Verify(r => r.ObtenerTodasAsync(null), Times.Once);
+    }
+
+    [Fact]
+    public async Task ObtenerTodasAsync_SinTransaccionesRegistradas_RetornaListaVacia()
+    {
+        _repositorioMock
+            .Setup(r => r.ObtenerTodasAsync(null))
+            .ReturnsAsync(Enumerable.Empty<Transaccion>());
+
+        var resultado = await _servicio.ObtenerTodasAsync();
+
+        Assert.Empty(resultado);
+    }
+
+    [Fact]
+    public async Task ObtenerTodasAsync_ConFiltroCreadoPor_DelegaElFiltroAlRepositorio()
+    {
+        const string creadoPor = "pepito.perez@email.com";
+        var transaccionesDeJuan = new List<Transaccion>
+        {
+            Transaccion.Crear(5000, "Sueldo de junio", new DateTime(2025, 12, 1), "sueldo", "BOB", TipoTransaccion.Ingreso, creadoPor)
+        };
+
+        _repositorioMock
+            .Setup(r => r.ObtenerTodasAsync(creadoPor))
+            .ReturnsAsync(transaccionesDeJuan);
+
+        var resultado = (await _servicio.ObtenerTodasAsync(creadoPor)).ToList();
+
+        Assert.Single(resultado);
+        _repositorioMock.Verify(r => r.ObtenerTodasAsync(creadoPor), Times.Once);
+    }
+
 }

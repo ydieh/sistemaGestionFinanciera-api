@@ -57,4 +57,51 @@ public class TransaccionesController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, respuesta);
         
     }
+
+    /// <summary>Obtiene el historial completo de transacciones registradas.</summary>
+    /// <remarks>
+    /// Consulta de Historial Completo.
+    ///
+    /// Retorna todas las transacciones registradas en el sistema,
+    /// ordenadas de la más reciente a la más antigua.
+    ///
+    /// Parámetro opcional **creadoPor**: filtra el historial para mostrar únicamente
+    /// las transacciones registradas por ese usuario 
+    ///
+    /// Ejemplo de respuesta:
+    ///
+    ///     GET /api/Transacciones/obtenerTransacciones?creadoPor=juan.perez
+    ///     {
+    ///         "codigo": 200,
+    ///         "mensaje": "Ejecutado exitosamente",
+    ///         "data": [
+    ///             {
+    ///                 "id": 1,
+    ///                 "monto": 5000,
+    ///                 "descripcion": "Sueldo de diciembre",
+    ///                 "fecha": "2025-12-01T00:00:00",
+    ///                 "origen": "sueldo",
+    ///                 "moneda": "BOB",
+    ///                 "tipo": 1,
+    ///                 "creadoPor": "juan.perez",
+    ///                 "fechaCreacion": "2025-12-01T10:15:00Z"
+    ///             }
+    ///         ]
+    ///     }
+    ///
+    /// Si no existen transacciones registradas, "data" se retorna como una lista vacía.
+    /// </remarks>
+    /// <response code="200">Listado de transacciones obtenido exitosamente.</response>
+    [HttpGet("obtenerTransacciones")]
+    [ProducesResponseType(typeof(RespuestaApi<IEnumerable<TransaccionRespuestaDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ObtenerTransacciones([FromQuery] string? creadoPor)
+    {
+        var transacciones = await _servicioTransacciones.ObtenerTodasAsync(creadoPor);
+        var respuesta = RespuestaApi<IEnumerable<TransaccionRespuestaDto>>.Exito(
+            data: transacciones,
+            mensaje: "Ejecutado exitosamente",
+            codigo: 200
+        );
+        return Ok(respuesta);
+    }
 }

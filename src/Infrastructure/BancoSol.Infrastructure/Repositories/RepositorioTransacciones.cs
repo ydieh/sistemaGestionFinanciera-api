@@ -2,6 +2,9 @@ using BancoSol.Domain.Entidades;
 using BancoSol.Domain.Interfaces;
 using BancoSol.Infrastructure.Datos;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BancoSol.Infrastructure.Repositorios;
 
@@ -9,21 +12,23 @@ public class RepositorioTransacciones : IRepositorioTransacciones
 {
     private readonly BancoSolDbContext _contexto;
 
-    public RepositorioTransacciones(BancoSolDbContext contexto)
-    {
-        _contexto = contexto;
-    }
+    public RepositorioTransacciones(BancoSolDbContext contexto) => _contexto = contexto;
 
     public async Task<Transaccion> CrearAsync(Transaccion transaccion)
     {
-        _contexto.Transacciones.Add(transaccion);
+        var resultado = await _contexto.Transacciones.AddAsync(transaccion);
         await _contexto.SaveChangesAsync();
-        return transaccion;
+        return resultado.Entity;
     }
 
-    public async Task<IEnumerable<Transaccion>> ObtenerTodasAsync()
+    public async Task<IEnumerable<Transaccion>> ObtenerTodasAsync(string? creadoPor = null)
     {
-        return await _contexto.Transacciones
+        var query = _contexto.Transacciones.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(creadoPor))
+            query = query.Where(t => t.CreadoPor == creadoPor);
+
+        return await query
             .OrderByDescending(t => t.Fecha)
             .ToListAsync();
     }

@@ -1,7 +1,7 @@
 using BancoSol.Application.DTOs;
 using BancoSol.Domain.Entidades;
 
-namespace BancoSol.Application.Servicios;
+namespace BancoSol.Application.DTOs;
 
 public static class TransaccionMapper
 {
@@ -17,7 +17,9 @@ public static class TransaccionMapper
         CreadoPor = transaccion.CreadoPor,
         FechaCreacion = transaccion.FechaCreacion
     };
+
+    
+
     public static IEnumerable<TransaccionRespuestaDto> ADtoLista(IEnumerable<Transaccion> transacciones) =>
         transacciones.Select(ADto);
-
 }

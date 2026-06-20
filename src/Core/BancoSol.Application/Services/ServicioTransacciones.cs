@@ -30,4 +30,10 @@ public class ServicioTransacciones : IServicioTransacciones
 
         return TransaccionMapper.ADto(transaccionCreada);
     }
+    public async Task<IEnumerable<TransaccionRespuestaDto>> ObtenerTodasAsync(string? creadoPor = null)
+    {
+        var transacciones = await _repositorio.ObtenerTodasAsync(creadoPor);
+
+        return TransaccionMapper.ADtoLista(transacciones);
+    }
 }
