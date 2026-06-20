@@ -19,10 +19,8 @@ if (string.IsNullOrWhiteSpace(cadenaConexion))
     var usuario = builder.Configuration["MYSQLUSER"];
     var clave = builder.Configuration["MYSQLPASSWORD"];
 
-    if (!string.IsNullOrWhiteSpace(host))
-    {
-        cadenaConexion = $"Server={host};Port={puerto};Database={baseDatos};User={usuario};Password={clave};";
-    }
+    cadenaConexion = $"Server={host};Port={puerto};Database={baseDatos};User={usuario};Password={clave};";
+    
 }
 
 if (string.IsNullOrWhiteSpace(cadenaConexion))
