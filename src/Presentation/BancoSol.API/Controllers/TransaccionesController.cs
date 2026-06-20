@@ -104,4 +104,31 @@ public class TransaccionesController : ControllerBase
         );
         return Ok(respuesta);
     }
+    /// <summary>Obtiene los detalles de una transacción específica por su identificador.</summary>
+    /// <remarks>
+    /// Consulta de Ingreso Específico.
+    ///
+    /// Si el identificador no existe, retorna 404. Si se especifica **creadoPor** y la
+    /// transacción pertenece a otro usuario, también retorna 404 (no se revela su existencia).
+    ///
+    /// Ejemplo de solicitud:
+    ///
+    ///     GET /api/Transacciones/42
+    ///
+    /// </remarks>
+    /// <response code="200">Transacción encontrada.</response>
+    /// <response code="404">No existe una transacción con ese identificador.</response>
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(RespuestaApi<TransaccionRespuestaDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RespuestaApi<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ObtenerPorId(int id, [FromQuery] string? creadoPor)
+    {
+        var transaccion = await _servicioTransacciones.ObtenerPorIdAsync(id, creadoPor);
+        var respuesta = RespuestaApi<TransaccionRespuestaDto>.Exito(
+            data: transaccion,
+            mensaje: "Ejecutado exitosamente",
+            codigo: 200
+        );
+        return Ok(respuesta);
+    }
 }

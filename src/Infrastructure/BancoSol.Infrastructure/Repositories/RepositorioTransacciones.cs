@@ -45,4 +45,5 @@ public class RepositorioTransacciones : IRepositorioTransacciones
             .OrderByDescending(t => t.Fecha)
             .ToListAsync();
     }
+    
 }

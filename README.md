@@ -53,3 +53,7 @@ Abre el archivo `appsettings.json` dentro del proyecto de la API (`src/Presentat
 * **GET** `/api/Transacciones/obtenerTransacciones?creadoPor={email}`
 * `creadoPor` (opcional): si se omite, retorna todo el historial; si se especifica, solo las transacciones de ese usuario.
 * `200 OK` con la lista (vacía si no hay registros).
+
+### Caso de Uso 3 — Consulta de Ingreso Específico
+* **GET** `/api/Transacciones/{id}?creadoPor={email}`
+* `200 OK` con el detalle / `404 Not Found` si no existe o pertenece a otro usuario.

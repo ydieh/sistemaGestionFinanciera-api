@@ -122,5 +122,57 @@ public class ServicioTransaccionesTests
         Assert.Single(resultado);
         _repositorioMock.Verify(r => r.ObtenerTodasAsync(creadoPor), Times.Once);
     }
+    [Fact]
+    public async Task ObtenerPorIdAsync_ConIdExistente_RetornaDtoMapeado()
+    {
+        var transaccion = Transaccion.Crear(5000, "Sueldo de diciembre", new DateTime(2025, 12, 1), "sueldo", "BOB", TipoTransaccion.Ingreso, "juan.perez@email.com");
+
+        _repositorioMock
+            .Setup(r => r.ObtenerPorIdAsync(42))
+            .ReturnsAsync(transaccion);
+
+        var resultado = await _servicio.ObtenerPorIdAsync(42);
+
+        Assert.Equal(5000, resultado.Monto);
+        Assert.Equal("BOB", resultado.Moneda);
+    }
+
+    [Fact]
+    public async Task ObtenerPorIdAsync_ConIdInexistente_LanzaTransaccionNoEncontradaException()
+    {
+        _repositorioMock
+            .Setup(r => r.ObtenerPorIdAsync(999))
+            .ReturnsAsync((Transaccion?)null);
+
+        await Assert.ThrowsAsync<TransaccionNoEncontradaException>(() => _servicio.ObtenerPorIdAsync(999));
+    }
+
+    [Fact]
+    public async Task ObtenerPorIdAsync_ConCreadoPorDeOtroUsuario_LanzaTransaccionNoEncontradaException()
+    {
+        var transaccionDeJuan = Transaccion.Crear(5000, "Sueldo de diciembre", new DateTime(2025, 12, 1), "sueldo", "BOB", TipoTransaccion.Ingreso, "juan.perez@email.com");
+
+        _repositorioMock
+            .Setup(r => r.ObtenerPorIdAsync(42))
+            .ReturnsAsync(transaccionDeJuan);
+
+        await Assert.ThrowsAsync<TransaccionNoEncontradaException>(
+            () => _servicio.ObtenerPorIdAsync(42, creadoPor: "maria.lopez@email.com"));
+    }
+
+    [Fact]
+    public async Task ObtenerPorIdAsync_ConCreadoPorDelMismoUsuario_RetornaLaTransaccion()
+    {
+        const string creadoPor = "juan.perez@email.com";
+        var transaccionDeJuan = Transaccion.Crear(5000, "Sueldo de diciembre", new DateTime(2025, 12, 1), "sueldo", "BOB", TipoTransaccion.Ingreso, creadoPor);
+
+        _repositorioMock
+            .Setup(r => r.ObtenerPorIdAsync(42))
+            .ReturnsAsync(transaccionDeJuan);
+
+        var resultado = await _servicio.ObtenerPorIdAsync(42, creadoPor);
+
+        Assert.Equal(creadoPor, resultado.CreadoPor);
+    }
 
 }

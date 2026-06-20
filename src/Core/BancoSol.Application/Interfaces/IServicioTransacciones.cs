@@ -6,4 +6,5 @@ public interface IServicioTransacciones
 {
     Task<TransaccionRespuestaDto> RegistrarTransaccionAsync(CrearTransaccionDto dto);
     Task<IEnumerable<TransaccionRespuestaDto>> ObtenerTodasAsync(string? creadoPor = null);
+    Task<TransaccionRespuestaDto> ObtenerPorIdAsync(int id, string? creadoPor = null);
 }

@@ -1,6 +1,7 @@
 using BancoSol.Application.DTOs;
 using BancoSol.Application.Interfaces;
 using BancoSol.Domain.Entidades;
+using BancoSol.Domain.Excepciones;
 using BancoSol.Domain.Interfaces;
 
 namespace BancoSol.Application.Servicios;
@@ -35,5 +36,18 @@ public class ServicioTransacciones : IServicioTransacciones
         var transacciones = await _repositorio.ObtenerTodasAsync(creadoPor);
 
         return TransaccionMapper.ADtoLista(transacciones);
+    }
+    public async Task<TransaccionRespuestaDto> ObtenerPorIdAsync(int id, string? creadoPor = null)
+    {
+        var transaccion = await _repositorio.ObtenerPorIdAsync(id);
+
+        var perteneceAOtroUsuario = transaccion is not null
+            && !string.IsNullOrWhiteSpace(creadoPor)
+            && transaccion.CreadoPor != creadoPor;
+
+        if (transaccion is null || perteneceAOtroUsuario)
+            throw new TransaccionNoEncontradaException(id);
+
+        return TransaccionMapper.ADto(transaccion);
     }
 }
