@@ -12,7 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 var cadenaConexion = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(cadenaConexion))
 {
-    throw new InvalidOperationException("'ConnectionStrings__DefaultConnection' ");
+    var host = builder.Configuration["MYSQLHOST"];
+    var puerto = builder.Configuration["MYSQLPORT"] ?? "3306";
+    var baseDatos = builder.Configuration["MYSQLDATABASE"];
+    var usuario = builder.Configuration["MYSQLUSER"];
+    var clave = builder.Configuration["MYSQLPASSWORD"];
+
+    if (!string.IsNullOrWhiteSpace(host))
+    {
+        cadenaConexion = $"Server={host};Port={puerto};Database={baseDatos};User={usuario};Password={clave};";
+    }
 }
 
 builder.Services.AddDbContext<BancoSolDbContext>(opciones =>
