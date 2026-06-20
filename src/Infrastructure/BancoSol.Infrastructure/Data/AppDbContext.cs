@@ -1,20 +1,61 @@
-using BancoSol.Domain.Entities;
+using BancoSol.Domain.Entidades;
+using BancoSol.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
-namespace BancoSol.Infrastructure.Data;
+namespace BancoSol.Infrastructure.Datos;
 
-public class AppDbContext : DbContext
+public class BancoSolDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public BancoSolDbContext(DbContextOptions<BancoSolDbContext> options) : base(options) { }
 
-    public DbSet<SampleEntity> SampleEntities => Set<SampleEntity>();
+    public DbSet<Transaccion> Transacciones => Set<Transaccion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<SampleEntity>(entity =>
+        modelBuilder.Entity<Transaccion>(entidad =>
         {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entidad.ToTable("Transacciones");
+
+            entidad.HasKey(t => t.Id);
+
+            entidad.Property(t => t.Monto)
+                .HasColumnType("decimal(18,2)")
+                .IsRequired();
+
+            entidad.Property(t => t.Descripcion)
+                .HasMaxLength(500)
+                .IsRequired();
+
+            entidad.Property(t => t.Fecha)
+                .IsRequired();
+
+            entidad.Property(t => t.Origen)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entidad.Property(t => t.Tipo)
+                .HasConversion<string>() 
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entidad.Property(t => t.CreadoPor)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            entidad.Property(t => t.FechaCreacion)
+                .IsRequired();
+
+      
+            entidad.Property(t => t.Moneda)
+                .HasConversion(
+                    moneda => moneda.Codigo,
+                    codigo => Moneda.Crear(codigo))
+                .HasColumnName("Moneda")
+                .HasMaxLength(3)
+                .IsRequired();
+
+            entidad.HasIndex(t => t.Fecha); 
         });
     }
 }

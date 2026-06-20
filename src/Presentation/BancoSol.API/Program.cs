@@ -1,60 +1,68 @@
+using BancoSol.API.Middleware;
 using BancoSol.Application.Interfaces;
-using BancoSol.Application.Services;
+using BancoSol.Application.Servicios;
 using BancoSol.Domain.Interfaces;
-using BancoSol.Infrastructure.Data;
-using BancoSol.Infrastructure.Repositories;
+using BancoSol.Infrastructure.Datos;
+using BancoSol.Infrastructure.Repositorios;
+using BancoSol.Infrastructure.ServiciosExternos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+var cadenaConexion = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<BancoSolDbContext>(opciones =>
+    opciones.UseMySql(cadenaConexion, ServerVersion.AutoDetect(cadenaConexion)));
 
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IRepositorioTransacciones, RepositorioTransacciones>();
 
+builder.Services.AddScoped<IServicioTransacciones, ServicioTransacciones>();
 
-builder.Services.AddScoped<ISampleService, SampleService>();
+builder.Services.AddHttpClient<IServicioTipoCambio, ServicioTipoCambioHexaRate>();
 
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddSwaggerGen(opciones =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    opciones.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "BancoSol API",
         Version = "v1",
-        Description = "API REST - arquitectura Onion"
+        Description = "API REST para gestión de finanzas personales. " +
+                       "Permite registrar transacciones (ingresos y egresos) en Bolivianos (BOB) " +
+                       "y Dólares (USD), y obtener reportes consolidados.",
+        Contact = new OpenApiContact { Name = "BancoSol Dev Team" }
     });
 
-    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath))
-        c.IncludeXmlComments(xmlPath);
+    opciones.UseInlineDefinitionsForEnums();
+
+    var archivoXml = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var rutaXml = Path.Combine(AppContext.BaseDirectory, archivoXml);
+    if (File.Exists(rutaXml))
+        opciones.IncludeXmlComments(rutaXml);
 });
 
-builder.Services.AddCors(options =>
+builder.Services.AddCors(opciones =>
 {
-    options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    opciones.AddDefaultPolicy(politica =>
+        politica.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<BancoSolDbContext>();
     db.Database.Migrate();
 }
-
-// ── Swagger siempre visible ───────────────────────────────────────────────────
 app.UseSwagger();
-app.UseSwaggerUI(c =>
+app.UseSwaggerUI(opciones =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "BancoSol API v1");
-    c.RoutePrefix = "swagger";
+    opciones.SwaggerEndpoint("/swagger/v1/swagger.json", "BancoSol API v1");
+    opciones.RoutePrefix = "swagger"; 
+    opciones.DocumentTitle = "BancoSol API - Documentación";
 });
 
 app.UseCors();
@@ -64,3 +72,4 @@ app.MapControllers();
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
+public partial class Program { }

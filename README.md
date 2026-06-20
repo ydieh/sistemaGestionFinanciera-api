@@ -1,80 +1,50 @@
-# BancoSol API — Plantilla Onion Architecture (.NET 8)
+# BancoSol - Sistema de Gestión Financiera Personal
 
-Proyecto base vacío listo para empezar a desarrollar.
+API REST  desarrollada para  que permite a los clientes registrar y analizar sus flujos financieros en múltiples divisas (Bolivianos y Dólares), centralizando reportes y balances consolidados de su situación financiera.
 
-## Estructura
+## Arquitectura y Decisiones de Diseño
 
-```
-BancoSol/
-├── src/
-│   ├── Core/
-│   │   ├── BancoSol.Domain/          ← Centro del onion. Entidades, interfaces, enums.
-│   │   │                                NO depende de nada.
-│   │   └── BancoSol.Application/     ← Casos de uso, DTOs, servicios.
-│   │                                    Depende solo de Domain.
-│   ├── Infrastructure/
-│   │   └── BancoSol.Infrastructure/  ← EF Core, repositorios, APIs externas.
-│   │                                    Depende de Domain + Application.
-│   └── Presentation/
-│       └── BancoSol.API/             ← Controllers, Program.cs, Swagger.
-│                                        Conecta todo (capa más externa).
-└── tests/
-    └── BancoSol.Tests/               ← Pruebas unitarias (xUnit + Moq)
-```
+El proyecto está diseñado bajo los principios de Arquitectura Cebolla para garantizar el desacoplamiento de la infraestructura, una alta mantenibilidad y testabilidad
 
-## Regla de oro del Onion
 
-**Las dependencias siempre apuntan hacia adentro.**
+## 🚀 Instrucciones de Ejecución Local
 
-```
-API → Infrastructure → Application → Domain
-```
+### Prerrequisitos
+* [.NET SDK 8.0](https://dotnet.microsoft.com/download) o superior.
+* Servidor [MySQL](https://www.mysql.com/) activo (local o en contenedor).
 
-Domain nunca sabe que existe Infrastructure o API. Si en algún momento un
-archivo de `BancoSol.Domain` necesita un `using BancoSol.Infrastructure...`,
-algo está mal estructurado.
+### 1. Configuración de Base de Datos
+Abre el archivo `appsettings.json` dentro del proyecto de la API (`src/Presentation/BancoSol.API/appsettings.json`) y actualiza tu cadena de conexión local en la propiedad `DefaultConnection`:
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Server=localhost;Database=bancosol_db;User=tu_usuario;Password=tu_password;"
+}
 
-## Cómo está organizado por ahora
 
-Incluye una entidad y servicio de **ejemplo** (`SampleEntity`, `SampleService`,
-`SampleController`) solo para que el proyecto compile y corra desde el día 1.
-Bórralos cuando agregues tus entidades reales.
+## 📝 Especificación Técnica de Endpoints 
 
-## Requisitos
+### 1. Registro de Transacciones (Ingresos)
+* **HTTP Method:** `POST`
+* **Ruta Física:** `/api/transacciones/registratransaccion`
+* **Content-Type:** `application/json`
+* **Descripción:** Permite un flujo financiero en el sistema. Aplica de manera  las reglas y validaciones.
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- MySQL 8.x
+#### 🛠️ Reglas de Negocio y Validación de Dominio (Criterios de Aceptación)
+1. **Validación de Monto:** El monto enviado debe ser estrictamente mayor a cero (`> 0`). En caso contrario, el dominio lanza un `MontoInvalidoException` (HTTP 400).
+2. **Campos Requeridos:** La `descripcion`, el `origen` y el usuario `creadoPor` son obligatorios, sanitizándose mediante `Trim()` para evitar strings vacíos o con espacios huérfanos.
+3. **Control de Divisas :** Únicamente se aceptan códigos ISO de moneda **`BOB`** (Bolivianos) y **`USD`** (Dólares) Cualquier otra divisa (como `EUR`) es rechazada inmediatamente por el Value Object `Moneda`
 
-## Cómo correr el proyecto
+---
 
-```bash
-# Restaurar paquetes
-dotnet restore
+#### 📥 Estructura de la Petición (Payload Request)
 
-# Configurar la cadena de conexión en src/Presentation/BancoSol.API/appsettings.json
-
-# Crear la primera migración
-dotnet ef migrations add InitialCreate \
-  --project src/Infrastructure/BancoSol.Infrastructure \
-  --startup-project src/Presentation/BancoSol.API
-
-# Ejecutar (las migraciones se aplican automáticamente al iniciar)
-dotnet run --project src/Presentation/BancoSol.API
-```
-
-Swagger disponible en: `http://localhost:5000/swagger`
-
-## Correr tests
-
-```bash
-dotnet test
-```
-
-## Siguiente paso sugerido
-
-1. Crea tu primera entidad real en `BancoSol.Domain/Entities/`
-2. Agrega su interfaz de repositorio si necesitas algo más que el CRUD genérico
-3. Crea el DTO y el servicio en `BancoSol.Application/`
-4. Mapea la entidad en `AppDbContext` (Infrastructure)
-5. Crea el controller en `BancoSol.API/Controllers/`
-6. Genera la migración y prueba en Swagger
+```json
+{
+  "monto": 5000.00,
+  "descripcion": "Sueldo de diciembre",
+  "fecha": "2025-12-01T00:00:00Z",
+  "origen": "sueldo",
+  "moneda": "BOB",
+  "tipo": 1,
+  "creadoPor": "juan.perez@email.com"
+}
