@@ -1,161 +1,92 @@
-# BancoSol - Sistema de Gestión Financiera Personal
+# BancoSol API — Sistema de Gestión Financiera Personal
 
-API REST  desarrollada para  que permite a los clientes registrar y analizar sus flujos financieros en múltiples divisas (Bolivianos y Dólares), centralizando reportes y balances consolidados de su situación financiera.
+API REST que permite registrar transacciones financieras (ingresos y egresos) en Bolivianos (BOB) y Dólares (USD), consultar el historial, y obtener un balance consolidado convertido a la moneda que el usuario elija.
 
-## Arquitectura y Decisiones de Diseño
+**Stack:** .NET 8 · ASP.NET Core Web API · Entity Framework Core · MySQL · xUnit + Moq · Swagger/OpenAPI
 
-El proyecto está diseñado bajo los principios de Arquitectura Cebolla para garantizar el desacoplamiento de la infraestructura, una alta mantenibilidad y testabilidad
+## Arquitectura
 
+Onion Architecture, con la regla de dependencia en una sola dirección — Domain no conoce a nadie:
 
-## 🚀 Instrucciones de Ejecución Local
+```
+src/
+├── Core/
+│   ├── BancoSol.Domain          # Entidades, Value Objects, excepciones y reglas de negocio puras
+│   └── BancoSol.Application     # Casos de uso (servicios), DTOs y mapeo
+├── Infrastructure/
+│   └── BancoSol.Infrastructure  # EF Core + MySQL, cliente HTTP a la API externa HexaRate
+└── Presentation/
+    └── BancoSol.API             # Controllers, Swagger, middleware de excepciones
+tests/
+└── BancoSol.Tests               # xUnit + Moq, por capa (Dominio / Aplicación)
+```
 
-### Prerrequisitos
-* [.NET SDK 8.0](https://dotnet.microsoft.com/download) o superior.
-* Servidor [MySQL](https://www.mysql.com/) activo (local o en contenedor).
+## Decisiones de diseño
 
-### 1. Configuración de Base de Datos
-Abre el archivo `appsettings.json` dentro del proyecto de la API (`src/Presentation/BancoSol.API/appsettings.json`) y actualiza tu cadena de conexión local en la propiedad `DefaultConnection`:
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=localhost;Database=bancosol_db;User=tu_usuario;Password=tu_password;"
-}
+| Decisión | Razón |
+|---|---|
+| **Identificación de usuario sin autenticación.** `creadoPor` (capturado al registrar) se usa como filtro opcional en los endpoints de lectura. | El documento no incluye un caso de uso de login, pero los Casos 1 y 2 hablan de "mis ingresos" / "sus ingresos". Construir JWT completo no estaba en el alcance pedido; ver [Mejoras futuras](#mejoras-futuras). |
+| **El balance consolidado suma solo Ingresos**, aunque el dominio modela también Egresos. | Los criterios de aceptación y los 3 ejemplos numéricos del Caso 5/7 son exclusivamente sobre ingresos; filtrar por `TipoTransaccion.Ingreso` es lo que reproduce esos resultados exactos. |
+| **URL de HexaRate y cadena de conexión externalizadas** (patrón `IOptions<T>`, variables de entorno). | Permite cambiar de proveedor o de base de datos sin recompilar — necesario para desplegar en Railway sin hardcodear credenciales. |
+| **404 (no 403) al consultar un ingreso de otro usuario.** | Evita revelar la existencia de IDs ajenos (seguridad por oscuridad, mínimo viable sin auth real). |
 
+## Ejecución local
 
-## Endpoints implementados
+**Prerrequisitos:** [.NET SDK 8.0](https://dotnet.microsoft.com/download), MySQL activo (local o en contenedor).
+
+```bash
+# 1. Configurar la cadena de conexión en src/Presentation/BancoSol.API/appsettings.json
+#    "ConnectionStrings": { "DefaultConnection": "Server=localhost;Database=bancosol_db;User=tu_usuario;Password=tu_password;" }
+
+# 2. Restaurar, compilar y correr (las migraciones se aplican solas al iniciar)
+dotnet restore
+dotnet build
+dotnet run --project src/Presentation/BancoSol.API
+
+# 3. Correr las pruebas
+dotnet test
+```
+
+La API redirige `/` a `/swagger`, donde se puede explorar y probar cada endpoint 
+
+## Endpoints
 
 | Método | Ruta | Caso de uso |
-|--------|------|-------------|
-| `POST` | `/api/Transacciones/registraTransaccion` | 1. Registro de Transacción |
-| `GET` | `/api/Transacciones/obtenerTransacciones?creadoPor={opcional}` | 2. Consulta de Historial Completo |
-| `GET` | `/api/Transacciones/{id}?creadoPor={opcional}` | 3. Consulta de Transacción Específica |
-| `GET` | `/api/Reportes/tipoCambio` | 4. Obtención de Tipo de Cambio (HexaRate) |
-| `GET` | `/api/Reportes/balance?fechaInicio=&fechaFin=&moneda=&creadoPor={opcional}` | 5. Reporte de Balance Consolidado |
+|---|---|---|
+| `POST` | `/api/Transacciones/registraTransaccion` | 1. Registro de transacción |
+| `GET` | `/api/Transacciones/obtenerTransacciones?creadoPor={opcional}` | 2. Historial completo |
+| `GET` | `/api/Transacciones/{id}?creadoPor={opcional}` | 3. Consulta por ID |
+| `GET` | `/api/Reportes/tipoCambio` | 4. Tipo de cambio USD/BOB (HexaRate) |
+| `GET` | `/api/Reportes/balance?fechaInicio=&fechaFin=&moneda=&creadoPor={opcional}` | 5. Balance consolidado |
 
-### 1. Registrar transacción
-```http
-POST /api/Transacciones/registraTransaccion
-Content-Type: application/json
+Detalles completos de parámetros, ejemplos y respuestas: ver Swagger en `/swagger` — es la fuente de verdad interactiva, por lo que no se duplica aquí.
 
-{
-  "monto": 5000,
-  "descripcion": "Sueldo de diciembre",
-  "fecha": "2025-12-01",
-  "origen": "sueldo",
-  "moneda": "BOB",
-  "tipo": 1,
-  "creadoPor": "juan.perez@email.com"
-}
-```
-`tipo`: `1` = Ingreso, `2` = Egreso. `moneda`: `"BOB"` o `"USD"` (acepta minúsculas).
+**Notas rápidas:**
+- `moneda`: solo `BOB` o `USD` (insensible a mayúsculas) → `400` en cualquier otro caso.
+- `tipo`: `1` = Ingreso, `2` = Egreso.
+- Balance: si `fechaFin` se envía sin hora, se extiende a `23:59:59.999` de ese día para incluir todo lo registrado ese día.
 
-**Respuesta 201:**
-```json
-{
-  "codigo": 201,
-  "mensaje": "Ejecutado exitosamente",
-  "data": {
-    "id": 1,
-    "monto": 5000,
-    "descripcion": "Sueldo de diciembre",
-    "fecha": "2025-12-01T00:00:00",
-    "origen": "sueldo",
-    "moneda": "BOB",
-    "tipo": 1,
-    "creadoPor": "juan.perez@email.com",
-    "fechaCreacion": "2026-06-20T10:00:00Z"
-  }
-}
+## Pruebas
+
+```bash
+dotnet test
 ```
 
-**Respuesta 400 (moneda inválida):**
-```json
-{
-  "codigo": 400,
-  "mensaje": "Moneda 'EUR' no soportada. Solo se aceptan: BOB, USD.",
-  "data": null
-}
-```
+Cubre, por capa:
+- **Dominio:** `Moneda`, `Transaccion`, `CalculadoraBalance` (reproduce los 3 ejemplos numéricos exactos del documento de la prueba: 5692 BOB, 1350 USD, 1200 USD).
+- **Aplicación:** `ServicioTransacciones` (registro, validaciones, ownership) y `ServicioReportes` (tipo de cambio, balance, validación de moneda y rango de fechas).
 
-### 2. Historial completo
-```http
-GET /api/Transacciones/obtenerTransacciones?creadoPor=juan.perez
-```
-`creadoPor` es opcional; si se omite, devuelve todas las transacciones de
-todos los usuarios.
+## Despliegue
 
-### 3. Consultar transacción por ID
-```http
-GET /api/Transacciones/42?creadoPor=juan.perez
-```
-Si el ID no existe (o pertenece a otro usuario cuando se filtra por
-`creadoPor`), responde `404`.
+Desplegado en Railway (API + MySQL). Repositorio incluye `Dockerfile` para build reproducible. La cadena de conexión y la URL de HexaRate se inyectan por variables de entorno, no están en el código.
 
-### 4. Tipo de cambio actual
-```http
-GET /api/Reportes/tipoCambio
-```
-```json
-{
-  "codigo": 200,
-  "mensaje": "Ejecutado exitosamente",
-  "data": {
-    "origen": "USD",
-    "destino": "BOB",
-    "tasa": 6.92,
-    "consultadoEn": "2025-12-01T10:00:00Z"
-  }
-}
-```
+- **Repositorio:** _completar_
+- **API:** _completar_
+- **Swagger:** _completar_
 
-### 5. Balance consolidado
-```http
-GET /api/Reportes/balance?fechaInicio=2025-12-01&fechaFin=2025-12-31&moneda=BOB
-```
-Suma todos los **ingresos** del período (los egresos no se incluyen en este
-cálculo), convirtiendo a la moneda solicitada los que estén en moneda
-distinta, usando el tipo de cambio vigente de HexaRate. `creadoPor` es un
-filtro opcional adicional.
+## Mejoras futuras
 
-```json
-{
-  "codigo": 200,
-  "mensaje": "Ejecutado exitosamente",
-  "data": {
-    "fechaInicio": "2025-12-01T00:00:00",
-    "fechaFin": "2025-12-31T00:00:00",
-    "moneda": "BOB",
-    "balanceTotal": 5692.00,
-    "cantidadIngresosConsiderados": 3,
-    "tipoCambioUsado": 6.92
-  }
-}
-```
+1. **Autenticación (JWT/OAuth2).** Es la mejora de mayor impacto pendiente: hoy `creadoPor` se recibe del cliente sin verificar identidad, lo cual es aceptable para esta prueba técnica pero no para producción. Con JWT, `creadoPor` se derivaría del token validado en el servidor, no del payload — cerrando la brecha de seguridad entre lo pedido por el documento ("mis ingresos") y cómo se garantiza hoy.
+2. **Filtro de `creadoPor` en el balance a nivel SQL**, en lugar de en memoria tras traer todo el rango de fechas — mejor rendimiento con volúmenes grandes.
+3. **Paginación** en `obtenerTransacciones` para historiales extensos.
 
-> **Nota sobre rangos de fecha:** si `fechaFin` se envía sin hora (ej.
-> `"2025-12-31"`), internamente se extiende hasta `23:59:59.999...` de ese
-> día antes de consultar la base de datos, para incluir todas las
-> transacciones registradas ese día sin importar a qué hora se crearon.
-
----
-
-## Monedas soportadas
-
-Solo **BOB** (Bolivianos) y **USD** (Dólares). Cualquier otro código es
-rechazado con `400 Bad Request`. La validación es insensible a mayúsculas/minúsculas.
-
-## Tipos de transacción
-
-| Valor | Significado |
-|---|---|
-| `1` | Ingreso |
-| `2` | Egreso |
-
----
-
-## Pendientes / mejoras conocidas
-
-- El filtro `creadoPor` del reporte de balance (Caso de Uso 5) se aplica
-  **en memoria** después de traer las transacciones del rango de fechas,
-  en lugar de en la consulta SQL — funcional, pero no óptimo para volúmenes
-  grandes de datos.
-- No hay paginación en `obtenerTransacciones`.
