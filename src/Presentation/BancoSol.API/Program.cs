@@ -10,6 +10,7 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 var cadenaConexion = builder.Configuration.GetConnectionString("DefaultConnection");
+
 if (string.IsNullOrWhiteSpace(cadenaConexion))
 {
     var host = builder.Configuration["MYSQLHOST"];
@@ -22,6 +23,12 @@ if (string.IsNullOrWhiteSpace(cadenaConexion))
     {
         cadenaConexion = $"Server={host};Port={puerto};Database={baseDatos};User={usuario};Password={clave};";
     }
+}
+
+if (string.IsNullOrWhiteSpace(cadenaConexion))
+{
+    throw new InvalidOperationException(
+        "Cadena de conexión no configurada. Configure 'ConnectionStrings:DefaultConnection' o las variables de entorno MYSQLHOST, MYSQLDATABASE, MYSQLUSER y MYSQLPASSWORD.");
 }
 
 builder.Services.AddDbContext<BancoSolDbContext>(opciones =>
@@ -43,7 +50,7 @@ builder.Services.AddSwaggerGen(opciones =>
         Title = "BancoSol API",
         Version = "v1",
         Description = "API REST para gestión de finanzas personales. " +
-                       "Permite registrar transacciones (ingresos y egresos) en Bolivianos (BOB) " +
+                       "Permite registrar transacciones (ingresos ) en Bolivianos (BOB) " +
                        "y Dólares (USD), y obtener reportes consolidados.",
         Contact = new OpenApiContact { Name = "BancoSol Dev Team" }
     });

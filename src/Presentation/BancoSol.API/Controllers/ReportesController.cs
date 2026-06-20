@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BancoSol.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Produces("application/json")]
 public class ReportesController : ControllerBase
 {
@@ -18,7 +18,7 @@ public class ReportesController : ControllerBase
 
     /// <summary>Consulta el tipo de cambio USD/BOB vigente.</summary>
     /// <remarks>
-    /// Caso de Uso 4: Obtención de Información de Cambio de Moneda.
+    /// Obtención de Información de Cambio de Moneda.
     ///
     /// Consulta la tasa de conversión actual desde HexaRate API
     /// (https://hexarate.paikama.co/api/rates/USD/BOB/latest). Esta misma información es
@@ -35,7 +35,7 @@ public class ReportesController : ControllerBase
     ///             "origen": "USD",
     ///             "destino": "BOB",
     ///             "tasa": 6.92,
-    ///             "consultadoEn": "2025-12-01T10:00:00Z"
+    ///             "consultadoEn": "2026-06-20T10:00:00Z"
     ///         }
     ///     }
     /// </remarks>
@@ -57,7 +57,7 @@ public class ReportesController : ControllerBase
 
     /// <summary>Obtiene el balance consolidado de ingresos en un período y moneda específicos.</summary>
     /// <remarks>
-    /// Caso de Uso 5: Reporte de Balance Consolidado.
+    /// Reporte de Balance Consolidado.
     ///
     /// Suma todos los ingresos registrados dentro del rango de fechas, convirtiendo a la
     /// moneda solicitada los que estén en una moneda diferente, usando el tipo de cambio vigente.
@@ -66,7 +66,7 @@ public class ReportesController : ControllerBase
     ///
     /// Ejemplo de solicitud:
     ///
-    ///     GET /api/Reportes/balance?fechaInicio=2025-12-01&amp;fechaFin=2025-12-31&amp;moneda=BOB
+    ///     GET /api/Reportes/balance?fechaInicio=2026-06-01&amp;fechaFin=2026-06-31&amp;moneda=BOB
     ///
     /// Ejemplo de respuesta (según el Ejemplo 1 del documento de requerimientos):
     ///
@@ -74,8 +74,8 @@ public class ReportesController : ControllerBase
     ///         "codigo": 200,
     ///         "mensaje": "Ejecutado exitosamente",
     ///         "data": {
-    ///             "fechaInicio": "2025-12-01T00:00:00",
-    ///             "fechaFin": "2025-12-31T00:00:00",
+    ///             "fechaInicio": "2026-06-01T00:00:00",
+    ///             "fechaFin": "2026-06-31T00:00:00",
     ///             "moneda": "BOB",
     ///             "balanceTotal": 5692.00,
     ///             "cantidadIngresosConsiderados": 3,

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BancoSol.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Produces("application/json")]
 public class TransaccionesController : ControllerBase
 {
@@ -18,7 +18,7 @@ public class TransaccionesController : ControllerBase
 
     /// <summary>Registra una nueva transacción (ingreso =1).</summary>
     /// <remarks>
-    /// Caso de Uso 1: Registro de Transacción.
+    ///  Registro de Transacción.
     ///
     /// Solo se aceptan las monedas **BOB** (Bolivianos) y **USD** (Dólares).
     /// Cualquier otra moneda será rechazada con un 400 Bad Request.
@@ -28,12 +28,12 @@ public class TransaccionesController : ControllerBase
     ///     POST /api/registraTransacciones
     ///     {
     ///         "monto": 5000,
-    ///         "descripcion": "Sueldo de diciembre",
-    ///         "fecha": "2025-12-01",
+    ///         "descripcion": "Sueldo de junio",
+    ///         "fecha": "2026-06-20",
     ///         "origen": "sueldo",
     ///         "moneda": "BOB",
     ///         "tipo": 1,
-    ///         "creadoPor": "juan.perez@email.com"
+    ///         "creadoPor": "juan.perez"
     ///     }
     ///
     /// **tipo**: 1 = Ingreso.
@@ -60,9 +60,9 @@ public class TransaccionesController : ControllerBase
 
     /// <summary>Obtiene el historial completo de transacciones registradas.</summary>
     /// <remarks>
-    /// Consulta de Historial Completo.
     ///
-    /// Retorna todas las transacciones registradas en el sistema,
+    /// Retorna todas las transacciones registradas en el sistema 
+    /// 
     /// ordenadas de la más reciente a la más antigua.
     ///
     /// Parámetro opcional **creadoPor**: filtra el historial para mostrar únicamente
@@ -79,12 +79,12 @@ public class TransaccionesController : ControllerBase
     ///                 "id": 1,
     ///                 "monto": 5000,
     ///                 "descripcion": "Sueldo de diciembre",
-    ///                 "fecha": "2025-12-01T00:00:00",
+    ///                 "fecha": "2026-06-20T00:00:00",
     ///                 "origen": "sueldo",
     ///                 "moneda": "BOB",
     ///                 "tipo": 1,
     ///                 "creadoPor": "juan.perez",
-    ///                 "fechaCreacion": "2025-12-01T10:15:00Z"
+    ///                 "fechaCreacion": "2026-06-20T00:00:00"
     ///             }
     ///         ]
     ///     }
@@ -113,7 +113,7 @@ public class TransaccionesController : ControllerBase
     ///
     /// Ejemplo de solicitud:
     ///
-    ///     GET /api/Transacciones/42
+    ///     GET /api/Transacciones/2
     ///
     /// </remarks>
     /// <response code="200">Transacción encontrada.</response>
