@@ -2,5 +2,5 @@ namespace BancoSol.Domain.Interfaces;
 
 public interface IServicioTipoCambio
 {
-    Task<decimal> ObtenerTipoCambioUsdBobAsync();
+    Task<decimal> ObtenerTipoCambioUsdBobAsync(CancellationToken cancellationToken = default);
 }

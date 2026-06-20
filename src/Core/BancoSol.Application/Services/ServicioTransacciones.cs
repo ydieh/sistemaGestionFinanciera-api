@@ -16,7 +16,7 @@ public class ServicioTransacciones : IServicioTransacciones
         _repositorio = repositorio;
     }
 
-    public async Task<TransaccionRespuestaDto> RegistrarTransaccionAsync(CrearTransaccionDto dto)
+    public async Task<TransaccionRespuestaDto> RegistrarTransaccionAsync(CrearTransaccionDto dto, CancellationToken cancellationToken = default)
     {
         var transaccion = Transaccion.Crear(
             monto: dto.Monto,
@@ -27,13 +27,23 @@ public class ServicioTransacciones : IServicioTransacciones
             tipo: dto.Tipo,
             creadoPor: dto.CreadoPor);
 
-        var transaccionCreada = await _repositorio.CrearAsync(transaccion);
+        var transaccionCreada = await _repositorio.CrearAsync(transaccion, cancellationToken);
 
         return TransaccionMapper.ADto(transaccionCreada);
     }
     public async Task<IEnumerable<TransaccionRespuestaDto>> ObtenerTodasAsync(string? creadoPor = null)
     {
-        var transacciones = await _repositorio.ObtenerTodasAsync(creadoPor);
+        IEnumerable<Transaccion> transacciones;
+
+        if (string.IsNullOrWhiteSpace(creadoPor))
+        {
+            transacciones = await _repositorio.ObtenerTodasAsync();
+        }
+        else
+        {
+            var todas = await _repositorio.ObtenerTodasAsync();
+            transacciones = todas.Where(t => t.CreadoPor == creadoPor);
+        }
 
         return TransaccionMapper.ADtoLista(transacciones);
     }

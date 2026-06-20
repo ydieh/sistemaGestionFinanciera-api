@@ -21,39 +21,141 @@ Abre el archivo `appsettings.json` dentro del proyecto de la API (`src/Presentat
 }
 
 
-## 📝 Especificación Técnica de Endpoints 
+## Endpoints implementados
 
-### 1. Registro de Transacciones (Ingresos)
-* **HTTP Method:** `POST`
-* **Ruta Física:** `/api/transacciones/registratransaccion`
-* **Content-Type:** `application/json`
-* **Descripción:** Permite un flujo financiero en el sistema. Aplica de manera  las reglas y validaciones.
+| Método | Ruta | Caso de uso |
+|--------|------|-------------|
+| `POST` | `/api/Transacciones/registraTransaccion` | 1. Registro de Transacción |
+| `GET` | `/api/Transacciones/obtenerTransacciones?creadoPor={opcional}` | 2. Consulta de Historial Completo |
+| `GET` | `/api/Transacciones/{id}?creadoPor={opcional}` | 3. Consulta de Transacción Específica |
+| `GET` | `/api/Reportes/tipoCambio` | 4. Obtención de Tipo de Cambio (HexaRate) |
+| `GET` | `/api/Reportes/balance?fechaInicio=&fechaFin=&moneda=&creadoPor={opcional}` | 5. Reporte de Balance Consolidado |
 
-#### 🛠️ Reglas de Negocio y Validación de Dominio (Criterios de Aceptación)
-1. **Validación de Monto:** El monto enviado debe ser estrictamente mayor a cero (`> 0`). En caso contrario, el dominio lanza un `MontoInvalidoException` (HTTP 400).
-2. **Campos Requeridos:** La `descripcion`, el `origen` y el usuario `creadoPor` son obligatorios, sanitizándose mediante `Trim()` para evitar strings vacíos o con espacios huérfanos.
-3. **Control de Divisas :** Únicamente se aceptan códigos ISO de moneda **`BOB`** (Bolivianos) y **`USD`** (Dólares) Cualquier otra divisa (como `EUR`) es rechazada inmediatamente por el Value Object `Moneda`
+### 1. Registrar transacción
+```http
+POST /api/Transacciones/registraTransaccion
+Content-Type: application/json
 
----
-
-#### 📥 Estructura de la Petición (Payload Request)
-
-```json
 {
-  "monto": 5000.00,
+  "monto": 5000,
   "descripcion": "Sueldo de diciembre",
-  "fecha": "2025-12-01T00:00:00Z",
+  "fecha": "2025-12-01",
   "origen": "sueldo",
   "moneda": "BOB",
   "tipo": 1,
   "creadoPor": "juan.perez@email.com"
 }
+```
+`tipo`: `1` = Ingreso, `2` = Egreso. `moneda`: `"BOB"` o `"USD"` (acepta minúsculas).
 
-###  Consulta de Historial Completo
-* **GET** `/api/Transacciones/obtenerTransacciones?creadoPor={email}`
-* `creadoPor` (opcional): si se omite, retorna todo el historial; si se especifica, solo las transacciones de ese usuario.
-* `200 OK` con la lista (vacía si no hay registros).
+**Respuesta 201:**
+```json
+{
+  "codigo": 201,
+  "mensaje": "Ejecutado exitosamente",
+  "data": {
+    "id": 1,
+    "monto": 5000,
+    "descripcion": "Sueldo de diciembre",
+    "fecha": "2025-12-01T00:00:00",
+    "origen": "sueldo",
+    "moneda": "BOB",
+    "tipo": 1,
+    "creadoPor": "juan.perez@email.com",
+    "fechaCreacion": "2026-06-20T10:00:00Z"
+  }
+}
+```
 
-### Caso de Uso 3 — Consulta de Ingreso Específico
-* **GET** `/api/Transacciones/{id}?creadoPor={email}`
-* `200 OK` con el detalle / `404 Not Found` si no existe o pertenece a otro usuario.
+**Respuesta 400 (moneda inválida):**
+```json
+{
+  "codigo": 400,
+  "mensaje": "Moneda 'EUR' no soportada. Solo se aceptan: BOB, USD.",
+  "data": null
+}
+```
+
+### 2. Historial completo
+```http
+GET /api/Transacciones/obtenerTransacciones?creadoPor=juan.perez
+```
+`creadoPor` es opcional; si se omite, devuelve todas las transacciones de
+todos los usuarios.
+
+### 3. Consultar transacción por ID
+```http
+GET /api/Transacciones/42?creadoPor=juan.perez
+```
+Si el ID no existe (o pertenece a otro usuario cuando se filtra por
+`creadoPor`), responde `404`.
+
+### 4. Tipo de cambio actual
+```http
+GET /api/Reportes/tipoCambio
+```
+```json
+{
+  "codigo": 200,
+  "mensaje": "Ejecutado exitosamente",
+  "data": {
+    "origen": "USD",
+    "destino": "BOB",
+    "tasa": 6.92,
+    "consultadoEn": "2025-12-01T10:00:00Z"
+  }
+}
+```
+
+### 5. Balance consolidado
+```http
+GET /api/Reportes/balance?fechaInicio=2025-12-01&fechaFin=2025-12-31&moneda=BOB
+```
+Suma todos los **ingresos** del período (los egresos no se incluyen en este
+cálculo), convirtiendo a la moneda solicitada los que estén en moneda
+distinta, usando el tipo de cambio vigente de HexaRate. `creadoPor` es un
+filtro opcional adicional.
+
+```json
+{
+  "codigo": 200,
+  "mensaje": "Ejecutado exitosamente",
+  "data": {
+    "fechaInicio": "2025-12-01T00:00:00",
+    "fechaFin": "2025-12-31T00:00:00",
+    "moneda": "BOB",
+    "balanceTotal": 5692.00,
+    "cantidadIngresosConsiderados": 3,
+    "tipoCambioUsado": 6.92
+  }
+}
+```
+
+> **Nota sobre rangos de fecha:** si `fechaFin` se envía sin hora (ej.
+> `"2025-12-31"`), internamente se extiende hasta `23:59:59.999...` de ese
+> día antes de consultar la base de datos, para incluir todas las
+> transacciones registradas ese día sin importar a qué hora se crearon.
+
+---
+
+## Monedas soportadas
+
+Solo **BOB** (Bolivianos) y **USD** (Dólares). Cualquier otro código es
+rechazado con `400 Bad Request`. La validación es insensible a mayúsculas/minúsculas.
+
+## Tipos de transacción
+
+| Valor | Significado |
+|---|---|
+| `1` | Ingreso |
+| `2` | Egreso |
+
+---
+
+## Pendientes / mejoras conocidas
+
+- El filtro `creadoPor` del reporte de balance (Caso de Uso 5) se aplica
+  **en memoria** después de traer las transacciones del rango de fechas,
+  en lugar de en la consulta SQL — funcional, pero no óptimo para volúmenes
+  grandes de datos.
+- No hay paginación en `obtenerTransacciones`.

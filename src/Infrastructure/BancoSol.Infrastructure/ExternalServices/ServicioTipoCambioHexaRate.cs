@@ -1,30 +1,38 @@
-using System.Text.Json;
 using BancoSol.Domain.Interfaces;
 using BancoSol.Infrastructure.ServiciosExternos.Modelos;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace BancoSol.Infrastructure.ServiciosExternos;
 
-public class ServicioTipoCambioHexaRate : IServicioTipoCambio
+public class ServicioTipoCambioHexaRate :   IServicioTipoCambio
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<ServicioTipoCambioHexaRate> _logger;
-    private const string UrlApi = "https://hexarate.paikama.co/api/rates/USD/BOB/latest";
-
-    public ServicioTipoCambioHexaRate(HttpClient httpClient, ILogger<ServicioTipoCambioHexaRate> logger)
+    private readonly string _urlApi;
+    public ServicioTipoCambioHexaRate(
+        HttpClient httpClient,
+        ILogger<ServicioTipoCambioHexaRate> logger,
+        IConfiguration configuracion)
     {
         _httpClient = httpClient;
         _logger = logger;
+
+        
+        _urlApi = configuracion["ServiciosExternos:HexaRateUrl"]
+            ?? throw new InvalidOperationException(
+                "No se configuró la URL de HexaRate (ServiciosExternos:HexaRateUrl).");
     }
 
-    public async Task<decimal> ObtenerTipoCambioUsdBobAsync()
+    public async Task<decimal> ObtenerTipoCambioUsdBobAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var respuesta = await _httpClient.GetAsync(UrlApi);
+            var respuesta = await _httpClient.GetAsync(_urlApi, cancellationToken);
             respuesta.EnsureSuccessStatusCode();
 
-            var json = await respuesta.Content.ReadAsStringAsync();
+            var json = await respuesta.Content.ReadAsStringAsync(cancellationToken);
             var opciones = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var resultado = JsonSerializer.Deserialize<RespuestaHexaRate>(json, opciones);
 

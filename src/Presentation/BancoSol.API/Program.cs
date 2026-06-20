@@ -9,14 +9,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
 var cadenaConexion = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(cadenaConexion))
+{
+    throw new InvalidOperationException("'ConnectionStrings__DefaultConnection' ");
+}
+
 builder.Services.AddDbContext<BancoSolDbContext>(opciones =>
     opciones.UseMySql(cadenaConexion, ServerVersion.AutoDetect(cadenaConexion)));
 
 builder.Services.AddScoped<IRepositorioTransacciones, RepositorioTransacciones>();
 
 builder.Services.AddScoped<IServicioTransacciones, ServicioTransacciones>();
+builder.Services.AddScoped<IServicioReportes, ServicioReportes>();
 
 builder.Services.AddHttpClient<IServicioTipoCambio, ServicioTipoCambioHexaRate>();
 
